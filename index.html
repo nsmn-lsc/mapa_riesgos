@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mapa de Riesgos por Municipio</title>
+  </head>
+  <body>
+    <div id="app">
+        <header>
+        <div class="header-left">
+            <img src="/img/encabezado_salud.png" alt="Logo" class="header-logo" />
+            <div class="header-titles">
+                <h1>Mapa de Riesgos - Hidalgo</h1>
+                <h2>Subsecretaria de Prestación de Servicios de Salud</h2>
+            </div>
+        </div>
+        <div class="controls">
+            <button id="toggleSidebar">☰ Menú</button>
+        </div>
+        </header>
+
+      
+      <main>
+        <aside id="sidebar">
+          <div class="sidebar-content">
+            <h2>Panel de Información</h2>
+            
+            <div class="info-section">
+              <h3>Estado de Hidalgo</h3>
+              <p>Sistema de visualización de riesgos por municipio</p>
+            </div>
+            
+            <div class="info-section">
+              <h3>Leyenda</h3>
+              <div class="legend-item">
+                <span class="legend-color" style="background-color: #d32f2f;"></span>
+                <span>Riesgo Alto (8-10)</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color" style="background-color: #f57c00;"></span>
+                <span>Riesgo Medio (5-7)</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color" style="background-color: #fbc02d;"></span>
+                <span>Riesgo Bajo (3-4)</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color" style="background-color: #388e3c;"></span>
+                <span>Riesgo Muy Bajo (0-2)</span>
+              </div>
+            </div>
+            
+            <div class="info-section" id="municipio-info">
+              <h3>Información del Municipio</h3>
+              <p class="placeholder-text">Haga clic en un municipio del mapa para ver su información</p>
+            </div>
+          </div>
+        </aside>
+        
+        <div id="map-container">
+          <div id="map"></div>
+        </div>
+      </main>
+    </div>
+    
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

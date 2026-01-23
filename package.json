@@ -1,0 +1,23 @@
+{
+  "name": "mapa-riesgos",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Mapa de riesgos por municipio usando Vite + Vanilla JS + Leaflet",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "leaflet": "^1.9.4",
+    "proj4": "^2.9.2",
+    "shapefile": "^0.6.6",
+    "stream-browserify": "^3.0.0",
+    "util": "^0.12.5",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "vite": "^5.0.11"
+  }
+}

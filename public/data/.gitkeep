@@ -1,0 +1,9 @@
+# Coloca aquí tus archivos de datos:
+# - municipios.zip (shapefile comprimido con .shp, .shx, .dbf, .prj)
+# - datos_riesgos.xlsx (archivo Excel con los datos de riesgos)
+#
+# Estructura esperada del Excel:
+# - id_municipio: Identificador del municipio
+# - nivel_riesgo: Nivel de riesgo (0-10)
+# - poblacion: Población del municipio
+# - observaciones: Notas adicionales
