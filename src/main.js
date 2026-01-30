@@ -14,6 +14,28 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 let estadoHidalgoLayer = null;
 let municipiosLayer = null;
+let jurisdiccionesData = {};
+
+// Mapeo de nombres del shapefile a nombres normalizados (para casos especiales)
+const mapaEspecialNombres = {
+  'TLAHUELILPAN': 'TLAHUIELILPAN',
+  'SANTIAGO TULANTEPEC DE LUGO GUERRERO': 'SANTIAGO TULANTEPEC DE L. G.'
+};
+
+const coloresPorJurisdiccion = {
+  'TULA': '#FF6B6B',
+  'TULANCINGO': '#4ECDC4',
+  'PACHUCA': '#45B7D1',
+  'HUEJUTLA': '#FFA07A',
+  'MINERAL DE LA REFORMA': '#98D8C8',
+  'TIZAYUCA': '#F7DC6F',
+  'ACTOPAN': '#BB8FCE',
+  'IXMIQUILPAN': '#85C1E2',
+  'ZACUALTIPAN': '#F8B88B',
+  'APAN': '#FAD7A0',
+  'HUICHAPAN': '#AED6F1',
+  'JACALA': '#D7BDE2'
+};
 
 async function loadShapefile(shpUrl, dbfUrl, needsReproj = true) {
   try {
@@ -75,6 +97,50 @@ function decodificarTexto(texto) {
   }
 }
 
+function normalizarNombreMunicipio(nombre) {
+  if (!nombre) return '';
+  
+  // Normalizar
+  let nombreLimpio = nombre
+    .toUpperCase()
+    .trim()
+    // Primero eliminar todos los caracteres de codificación incorrecta UTF-8
+    // IMPORTANTE: Á mayuscula (Á) mal codificada viene como Ã, hay que reemplazarla ANTES que ñ
+    .replace(/Ã¡/g, 'A')  // á mal codificada
+    .replace(/Ã©/g, 'E')  // é mal codificada
+    .replace(/Ã­/g, 'I')  // í mal codificada
+    .replace(/Ã³/g, 'O')  // ó mal codificada
+    .replace(/Ãº/g, 'U')  // ú mal codificada
+    .replace(/Ã±/g, 'N')  // ñ mal codificada
+    .replace(/Ã/g, 'A')  // Á mayúscula mal codificada (Ángeles)
+    .replace(/Ã/g, 'E')  // É mayúscula mal codificada
+    .replace(/Ã/g, 'I')  // Í mayúscula mal codificada
+    .replace(/Ã/g, 'O')  // Ó mayúscula mal codificada
+    .replace(/Ã/g, 'U')  // Ú mayúscula mal codificada
+    .replace(/Ã/g, 'N')  // Ñ mayúscula mal codificada
+    // Luego normalizar acentos correctos
+    .replace(/[ÁÀÄÂ]/g, 'A')
+    .replace(/[ÉÈËÊ]/g, 'E')
+    .replace(/[ÍÌÏÎ]/g, 'I')
+    .replace(/[ÓÒÖÔ]/g, 'O')
+    .replace(/[ÚÙÜÛ]/g, 'U')
+    .replace(/Ñ/g, 'N')
+    // Normalizar espacios múltiples
+    .replace(/\s+/g, ' ')
+    // Normalizar "de", "del", "la", "el" para consistencia
+    .replace(/\bDE\s+/g, 'DE ')
+    .replace(/\bDEL\s+/g, 'DEL ')
+    .replace(/\bLA\s+/g, 'LA ')
+    .replace(/\bEL\s+/g, 'EL ');
+  
+  // Aplicar mapeos especiales para casos que tienen nombres diferentes
+  if (mapaEspecialNombres[nombreLimpio]) {
+    return mapaEspecialNombres[nombreLimpio];
+  }
+  
+  return nombreLimpio;
+}
+
 function styleEstado() {
   return {
     fill: false,
@@ -84,14 +150,24 @@ function styleEstado() {
   };
 }
 
-function styleMunicipio() {
-  const colors = ['#ffeb3b', '#ff9800', '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffc107'];
+function styleMunicipio(feature) {
+  const nombreMunicipio = decodificarTexto(feature.properties.NOM_MUN);
+  const nombreNormalizado = normalizarNombreMunicipio(nombreMunicipio);
+  const jurisdiccionInfo = jurisdiccionesData[nombreNormalizado];
+  
+  if (!jurisdiccionInfo) {
+    console.warn(`⚠️ Municipio sin jurisdicción: "${nombreMunicipio}" -> normalizado: "${nombreNormalizado}"`);
+  }
+  
+  const colorClave = jurisdiccionInfo?.normalizado || null;
+  const color = colorClave && coloresPorJurisdiccion[colorClave] ? coloresPorJurisdiccion[colorClave] : '#CCCCCC';
+  
   return {
-    fillColor: colors[Math.floor(Math.random() * colors.length)],
+    fillColor: color,
     weight: 1,
     opacity: 0.8,
     color: '#666666',
-    fillOpacity: 0.4
+    fillOpacity: 0.8
   };
 }
 
@@ -100,7 +176,13 @@ function highlightMunicipio(e) {
   e.target.bringToFront();
   const props = e.target.feature.properties;
   const nombreMunicipio = decodificarTexto(props.NOM_MUN);
-  document.getElementById('municipio-info').innerHTML = `<h3>${nombreMunicipio || 'Sin nombre'}</h3><p><strong>Clave:</strong> ${props.CVEGEO || 'N/A'}</p>`;
+  const nombreNormalizado = normalizarNombreMunicipio(nombreMunicipio);
+  const infoJurisdiccion = jurisdiccionesData[nombreNormalizado];
+  const jurisdiccion = infoJurisdiccion?.original || 'No asignada';
+  const infoPanel = document.getElementById('municipio-info');
+  if (infoPanel) {
+    infoPanel.innerHTML = `<h3>${nombreMunicipio || 'Sin nombre'}</h3><p><strong>Jurisdicción:</strong> ${jurisdiccion}</p><p><strong>Clave:</strong> ${props.CVEGEO || 'N/A'}</p>`;
+  }
 }
 
 function resetHighlightMunicipio(e) {
@@ -110,7 +192,13 @@ function resetHighlightMunicipio(e) {
 function clickMunicipio(e) {
   const props = e.target.feature.properties;
   const nombreMunicipio = decodificarTexto(props.NOM_MUN);
-  document.getElementById('municipio-info').innerHTML = `<h3>${nombreMunicipio || 'Sin nombre'}</h3><p><strong>Clave:</strong> ${props.CVEGEO || 'N/A'}</p><p><strong>CVE ENT:</strong> ${props.CVE_ENT || 'N/A'}</p>`;
+  const nombreNormalizado = normalizarNombreMunicipio(nombreMunicipio);
+  const infoJurisdiccion = jurisdiccionesData[nombreNormalizado];
+  const jurisdiccion = infoJurisdiccion?.original || 'No asignada';
+  const infoPanel = document.getElementById('municipio-info');
+  if (infoPanel) {
+    infoPanel.innerHTML = `<h3>${nombreMunicipio || 'Sin nombre'}</h3><p><strong>Jurisdicción:</strong> ${jurisdiccion}</p><p><strong>Clave:</strong> ${props.CVEGEO || 'N/A'}</p><p><strong>CVE ENT:</strong> ${props.CVE_ENT || 'N/A'}</p>`;
+  }
 }
 
 function onEachMunicipio(feature, layer) {
@@ -121,6 +209,46 @@ function onEachMunicipio(feature, layer) {
     className: 'municipio-tooltip'
   });
   layer.on({ mouseover: highlightMunicipio, mouseout: resetHighlightMunicipio, click: clickMunicipio });
+}
+
+async function cargarJurisdicciones() {
+  console.log('📍 Cargando jurisdicciones...');
+  try {
+    const response = await fetch('/data/Municipios por Jurisdicción.csv');
+    const buffer = await response.arrayBuffer();
+    const text = new TextDecoder('latin1').decode(buffer);
+    const lines = text.split(/\r?\n/);
+    
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const parts = line.split(';');
+      if (parts.length >= 2) {
+        const jurisdiccionOriginal = parts[0].replace(/\s+/g, ' ').trim();
+        const municipioOriginal = parts[1].replace(/\s+/g, ' ').trim();
+        if (jurisdiccionOriginal && municipioOriginal) {
+          const municipioNormalizado = normalizarNombreMunicipio(municipioOriginal);
+          const jurisdiccionNormalizada = normalizarNombreMunicipio(jurisdiccionOriginal);
+          jurisdiccionesData[municipioNormalizado] = {
+            original: jurisdiccionOriginal,
+            normalizado: jurisdiccionNormalizada
+          };
+          
+          if (i <= 3) {
+            console.log(`  CSV línea ${i}: "${municipioOriginal}" -> "${municipioNormalizado}" | Jurisdicción: "${jurisdiccionOriginal}" -> clave "${jurisdiccionNormalizada}"`);
+          }
+        }
+      }
+    }
+    
+    const totalMunicipios = Object.keys(jurisdiccionesData).length;
+    const jurisdiccionesUnicas = [...new Set(Object.values(jurisdiccionesData).map(info => info.normalizado))];
+    console.log('✓ Jurisdicciones cargadas:', totalMunicipios, 'municipios');
+    console.log('📋 Jurisdicciones únicas normalizadas:', jurisdiccionesUnicas);
+  } catch (error) {
+    console.error('Error cargando jurisdicciones:', error);
+  }
 }
 
 async function cargarMapaBaseHidalgo() {
@@ -135,17 +263,31 @@ async function cargarMapaBaseHidalgo() {
 
 async function cargarMunicipiosHidalgo() {
   console.log('📍 Cargando municipios...');
-  const geojson = await loadShapefile('/data/muni_2018gw/muni_2018gw.shp', '/data/muni_2018gw/muni_2018gw.dbf', false);
+  const geojson = await loadShapefile('/data/muni_2018gw_hidalgo/muni_2018gw_hidalgo.shp', '/data/muni_2018gw_hidalgo/muni_2018gw_hidalgo.dbf', false);
   if (geojson?.features.length > 0) {
     console.log(`📊 Total municipios: ${geojson.features.length}`);
     
-    if (geojson.features[0]) {
-      console.log('📋 Propiedades disponibles:', Object.keys(geojson.features[0].properties));
-      console.log('📋 Ejemplo de datos:', geojson.features[0].properties);
-    }
-    
     const hidalgo = { type: 'FeatureCollection', features: geojson.features.filter(f => f.properties.CVE_ENT === '13') };
     console.log(`✓ Municipios Hidalgo: ${hidalgo.features.length}`);
+    
+    // Verificar coincidencias con jurisdicciones
+    let coincidencias = 0;
+    let sinJurisdiccion = [];
+    hidalgo.features.forEach(f => {
+      const nombreOriginal = decodificarTexto(f.properties.NOM_MUN);
+      const nombreNormalizado = normalizarNombreMunicipio(nombreOriginal);
+      if (jurisdiccionesData[nombreNormalizado]) {
+        coincidencias++;
+      } else {
+        sinJurisdiccion.push(nombreOriginal);
+      }
+    });
+    
+    console.log(`✓ Municipios con jurisdicción asignada: ${coincidencias}/${hidalgo.features.length}`);
+    if (sinJurisdiccion.length > 0) {
+      console.warn('⚠️ Municipios sin jurisdicción:', sinJurisdiccion);
+    }
+    
     if (hidalgo.features.length > 0) {
       municipiosLayer = L.geoJSON(hidalgo, { style: styleMunicipio, onEachFeature: onEachMunicipio }).addTo(map);
       if (estadoHidalgoLayer) estadoHidalgoLayer.bringToFront();
@@ -155,5 +297,8 @@ async function cargarMunicipiosHidalgo() {
 }
 
 console.log('🚀 Aplicación iniciada');
-(async () => { await cargarMapaBaseHidalgo(); await cargarMunicipiosHidalgo(); })();
-document.getElementById('toggleSidebar').addEventListener('click', () => document.getElementById('sidebar').classList.toggle('collapsed'));
+(async () => { 
+  await cargarJurisdicciones();
+  await cargarMapaBaseHidalgo(); 
+  await cargarMunicipiosHidalgo(); 
+})();

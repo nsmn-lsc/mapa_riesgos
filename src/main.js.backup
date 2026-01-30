@@ -211,8 +211,8 @@ async function cargarMunicipiosHidalgo() {
   
   try {
     const geojsonMunicipios = await loadShapefile(
-      '/data/muni_2018gw/muni_2018gw.shp',
-      '/data/muni_2018gw/muni_2018gw.dbf'
+      '/data/muni_2018gw_hidalgo/muni_2018gw_hidalgo.shp',
+      '/data/muni_2018gw_hidalgo/muni_2018gw_hidalgo.dbf'
     );
     
     if (geojsonMunicipios && geojsonMunicipios.features.length > 0) {

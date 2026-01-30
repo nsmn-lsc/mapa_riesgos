@@ -126,7 +126,7 @@ async function cargarMapaBaseHidalgo() {
 
 async function cargarMunicipiosHidalgo() {
   console.log('📍 Cargando municipios...');
-  const geojson = await loadShapefile('/data/muni_2018gw/muni_2018gw.shp', '/data/muni_2018gw/muni_2018gw.dbf', false);
+  const geojson = await loadShapefile('/data/muni_2018gw_hidalgo/muni_2018gw_hidalgo.shp', '/data/muni_2018gw_hidalgo/muni_2018gw_hidalgo.dbf', false);
   if (geojson?.features.length > 0) {
     console.log(`📊 Total municipios: ${geojson.features.length}`);
     
