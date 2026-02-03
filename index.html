@@ -12,6 +12,7 @@
             <img src="/img/encabezado_salud.png" alt="Logo" class="header-logo" />
             <div class="header-titles">
                 <h1>Subsecretaria de Prestación de Servicios de Salud</h1>
+                <h2>Mapa de Riesgos por Municipio, celebracion copa del mundo 2026</h2>
             </div>
         </div>
         </header>
@@ -77,6 +78,25 @@
         
         <div id="map-container">
           <div id="map"></div>
+          <button id="open-risk-modal" class="risk-fab" aria-haspopup="dialog" aria-controls="risk-modal" aria-expanded="false">
+            Riesgos
+          </button>
+        </div>
+
+        <div id="risk-modal" class="risk-modal" aria-hidden="true">
+          <div class="risk-modal__backdrop"></div>
+          <div class="risk-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="risk-modal-title">
+            <div class="risk-modal__header">
+              <div>
+                <p class="panel-caption">Panel de riesgos</p>
+                <h2 id="risk-modal-title">Riesgo municipal</h2>
+              </div>
+              <button id="risk-modal-close" class="risk-modal__close" aria-label="Cerrar panel">Cerrar</button>
+            </div>
+            <div id="risk-details" class="risk-modal__body">
+              <p class="placeholder-text">Selecciona un municipio en el mapa para consultar su panorámica de riesgos.</p>
+            </div>
+          </div>
         </div>
       </main>
     </div>

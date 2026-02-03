@@ -7,6 +7,43 @@ proj4.defs("EPSG:6372", "+proj=lcc +lat_1=17.5 +lat_2=29.5 +lat_0=12 +lon_0=-102
 
 const map = L.map('map').setView([20.0911, -98.7624], 8);
 
+const riskModalElement = document.getElementById('risk-modal');
+const riskModalOpenButton = document.getElementById('open-risk-modal');
+const riskModalCloseButton = document.getElementById('risk-modal-close');
+const riskModalBackdrop = document.querySelector('#risk-modal .risk-modal__backdrop');
+
+const setRiskModalVisibility = (isOpen) => {
+  if (!riskModalElement) return;
+  riskModalElement.classList.toggle('open', isOpen);
+  riskModalElement.setAttribute('aria-hidden', (!isOpen).toString());
+  if (riskModalOpenButton) {
+    riskModalOpenButton.setAttribute('aria-expanded', isOpen.toString());
+  }
+};
+
+const openRiskModal = () => setRiskModalVisibility(true);
+const closeRiskModal = () => setRiskModalVisibility(false);
+
+if (riskModalOpenButton) {
+  riskModalOpenButton.addEventListener('click', openRiskModal);
+}
+
+if (riskModalCloseButton) {
+  riskModalCloseButton.addEventListener('click', closeRiskModal);
+}
+
+if (riskModalBackdrop) {
+  riskModalBackdrop.addEventListener('click', closeRiskModal);
+}
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && riskModalElement?.classList.contains('open')) {
+    closeRiskModal();
+  }
+});
+
+setRiskModalVisibility(false);
+
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors',
   maxZoom: 18
@@ -15,6 +52,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let estadoHidalgoLayer = null;
 let municipiosLayer = null;
 let jurisdiccionesData = {};
+let riesgosMunicipales = {};
 
 // Mapeo de nombres del shapefile a nombres normalizados (para casos especiales)
 const mapaEspecialNombres = {
@@ -199,6 +237,8 @@ function clickMunicipio(e) {
   if (infoPanel) {
     infoPanel.innerHTML = `<h3>${nombreMunicipio || 'Sin nombre'}</h3><p><strong>Jurisdicción:</strong> ${jurisdiccion}</p><p><strong>Clave:</strong> ${props.CVEGEO || 'N/A'}</p><p><strong>CVE ENT:</strong> ${props.CVE_ENT || 'N/A'}</p>`;
   }
+  const riesgoInfo = riesgosMunicipales[nombreNormalizado];
+  actualizarPanelRiesgos(nombreMunicipio, jurisdiccion, riesgoInfo);
 }
 
 function onEachMunicipio(feature, layer) {
@@ -251,6 +291,62 @@ async function cargarJurisdicciones() {
   }
 }
 
+async function cargarRiesgosMunicipales() {
+  console.log('📍 Cargando matriz de riesgos municipales...');
+  try {
+    const response = await fetch('/data/riesgos_municipiop.json');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    let totalRegistros = 0;
+    Object.entries(data || {}).forEach(([jurisdiccionOriginal, municipios]) => {
+      const jurisdiccionNormalizada = normalizarNombreMunicipio(jurisdiccionOriginal);
+      Object.entries(municipios || {}).forEach(([municipioOriginal, valores]) => {
+        const municipioNormalizado = normalizarNombreMunicipio(municipioOriginal);
+        riesgosMunicipales[municipioNormalizado] = {
+          ...valores,
+          jurisdiccion: jurisdiccionOriginal,
+          jurisdiccionNormalizada
+        };
+        totalRegistros++;
+      });
+    });
+    console.log(`✓ Matriz de riesgos cargada: ${totalRegistros} municipios con dato`);
+  } catch (error) {
+    console.error('Error cargando riesgos municipales:', error);
+  }
+}
+
+function actualizarPanelRiesgos(nombreMunicipio, jurisdiccion, riesgoInfo) {
+  const panel = document.getElementById('risk-details');
+  if (!panel) return;
+
+  setRiskModalVisibility(true);
+
+  if (!riesgoInfo) {
+    panel.innerHTML = `<p class="placeholder-text">No se registran riesgos para ${nombreMunicipio}. Selecciona otro municipio para continuar.</p>`;
+    return;
+  }
+
+  const riesgoDescripcion = riesgoInfo.riesgos ?? 'Sin descripción disponible.';
+  const fuente = riesgoInfo.fuente || 'Base de riesgos municipales';
+
+  panel.innerHTML = `
+    <div class="risk-headline">
+      <div>
+        <p class="risk-label">Municipio</p>
+        <h3>${nombreMunicipio}</h3>
+      </div>
+    </div>
+    <div class="risk-meta">
+      <p><strong>Jurisdicción:</strong> ${jurisdiccion}</p>
+      <p><strong>Fuente:</strong> ${fuente}</p>
+    </div>
+    <div class="risk-text">${riesgoDescripcion}</div>
+  `;
+}
+
 async function cargarMapaBaseHidalgo() {
   console.log('📍 Cargando contorno de Hidalgo...');
   const geojson = await loadShapefile('/data/hidalgo_13ent/13ent.shp', '/data/hidalgo_13ent/13ent.dbf', true);
@@ -299,6 +395,7 @@ async function cargarMunicipiosHidalgo() {
 console.log('🚀 Aplicación iniciada');
 (async () => { 
   await cargarJurisdicciones();
+  await cargarRiesgosMunicipales();
   await cargarMapaBaseHidalgo(); 
   await cargarMunicipiosHidalgo(); 
 })();
